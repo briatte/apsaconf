@@ -12,6 +12,8 @@ There are __9,772 sessions__ and __28,583 papers__, containing __15,974 unique p
 | 2020 | 1,301 | 5,705 | 3,480 |
 | 2021 | 1,368 | 7,016 | 4,459 |
 
+This is __work in progress__, so the counts are approximate until further data cleaning and other corrections are performed.
+
 Running the download scripts takes roughly two days (the scripts leave 1.5 second between each download to avoid server choking).
 
 ## Data
@@ -36,6 +38,8 @@ Notes:
 
 - Scripts 01-03 download the raw data, parse it, and create the datasets
 - Scripts 04-05 sample conference panels, papers and participants
+
+Script 05 is in draft form and does not yet do much.
 
 ## Notes
 

@@ -16,14 +16,14 @@ for (y in 17:15) {
 
   # 1. simulate session
   # 2. bounce from main program page to the one listing session (panel) types
-  # (might be made silent with httr::verbose)
-  s <- rvest::session(u) %>%
+  #    (could not find how to make it silent with httr::verbose)
+  s1 <- rvest::session(u) %>%
     session_jump_to(str_c(u, "?cmd=Prepare+Online+Program&program_focus=main")) %>%
     session_follow_link(xpath = "//a[contains(@href, 'session_type')]")
 
   cat("Finding session types... ")
 
-  h <- read_html(s)
+  h <- read_html(s1)
 
   # get URLs listing all sessions (panels) by type
   p <- tibble::tibble(
@@ -47,8 +47,10 @@ for (y in 17:15) {
 
     cat("APSA", str_c("20", y, collapse = ""), p$text[ j ])
 
-    h <- session_jump_to(s, p$url[ j ]) %>%
-      read_html()
+    # 3. go to panel types page, saving the session in order to initiate
+    #    the download of papers from that page later
+    s2 <- session_jump_to(s1, p$url[ j ])
+    h <- read_html(s2)
 
     # URLs to all sessions
     u <- tibble::tibble(
@@ -75,7 +77,8 @@ for (y in 17:15) {
 
       if (!fs::file_exists(u$file[ i ])) {
 
-        session_jump_to(s, u$url[ i ]) %>%
+        # that jump is identical to that used in newer years
+        session_jump_to(s1, u$url[ i ]) %>%
           read_html() %>%
           readr::write_lines(u$file[ i ])
 
@@ -104,12 +107,22 @@ for (y in 17:15) {
               fs::path("html", str_c("apsa", y), .)
           )
 
-        cat("Downloading", nrow(h), "paper abstract(s)")
+        # 4. go from panel types page to individual panel page
+        #   (requires matching the URL from within the Web session)
+        s3 <- str_remove(u$url[i], "&PHPSESSID=.*") %>%
+          str_c("//a[contains(@href, '", ., "')]") %>%
+          session_follow_link(s2, xpath = .)
+
+        cat("Downloading", nrow(h), "paper abstract(s)...\n")
         for (k in nrow(h):1) {
 
           if (!fs::file_exists(h$file[ k ])) {
 
-            session_jump_to(s, h$url[ k ]) %>%
+            # 5. go from individual panel page to individual paper page
+            #    (requires matching the URL from within the Web session)
+            str_remove(h$url[ k ], "&PHPSESSID=.*") %>%
+              str_c("//a[contains(@href, '", ., "')]") %>%
+              session_follow_link(s3, xpath = .) %>%
               read_html() %>%
               readr::write_lines(h$file[ k ])
 
@@ -117,10 +130,10 @@ for (y in 17:15) {
             Sys.sleep(1.5)
 
           }
-          cat(".")
+          # cat(".")
 
         }
-        cat("\n")
+        # cat("\n")
 
       }
 

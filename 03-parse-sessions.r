@@ -369,6 +369,7 @@ cat(
   "Exported",
   n_distinct(d$year), "years,",
   n_distinct(d$session), "sessions,",
+  n_distinct(d$paper), "papers,",
   n_distinct(d$full_name), "names,",
   n_distinct(d$pid), "participants,",
   n_distinct(d$affiliation, na.rm = TRUE), "affiliations.\n"

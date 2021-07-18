@@ -1,3 +1,8 @@
+#' Download APSA sessions and papers for years 2018, 2019, 2020 and 2021
+#'
+#' The script sets the time zone if required and then proceeds to download both
+#' sessions (conference panels) and papers.
+
 library(tidyverse)
 library(rvest)
 

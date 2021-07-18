@@ -1,3 +1,8 @@
+#' Download APSA sessions and papers for years 2015, 2016 and 2017
+#'
+#' The script follows the same steps as script 01, except with some extra jumps
+#' between Web pages in order to download papers. Its output is more verbose.
+
 library(tidyverse)
 library(rvest)
 

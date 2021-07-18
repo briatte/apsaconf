@@ -169,7 +169,6 @@ filter(d, year == 2021, is.na(pid)) %>%
 # remove problematic papers
 d <- filter(d, !is.na(pid))
 
-
 # quick data checks -------------------------------------------------------
 
 # roles are homogeneous

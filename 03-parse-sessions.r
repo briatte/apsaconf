@@ -144,31 +144,31 @@ d <- filter(d, str_detect(pid, "paper_id")) %>%
 stopifnot(d$role.x %in% c("p", NA_character_))
 stopifnot(d$role.y %in% c("p", NA_character_))
 
-# finalize
+# finalize roles and remove duplicates
 d <- d %>%
   mutate(role = if_else(is.na(role), role.x, role)) %>%
   select(-role.x, -role.y) %>%
   mutate(pid = str_remove(pid, "people_id=")) %>%
-  # a single role repeats fully once (session 1274656, chair listed twice)
+  # remove two duplicates:
+  # - session 1002316, presenter listed twice on same paper
+  # - session 1274656, chair listed twice
   distinct()
 
-# minimal data cleaning ---------------------------------------------------
+# diagnose downloading/parsing issues -------------------------------------
 
-# fix minor encoding issues in affiliations
-d$affiliation <- d$affiliation %>%
-  str_replace_all("UniversitÃ©", "Université") %>%
-  str_replace_all("InvestigaciÃ³n", "Investigación") %>%
-  str_replace_all("EconÃ³mica", "Económica") %>%
-  str_replace_all("PolÃ­tica", "Política") %>%
-  str_replace_all("SÃo Paulo", "São Paul")
+# look at the very few papers with no author/presenter information
+filter(d, is.na(pid)) %>%
+  select(year:paper, -session_title) %>%
+  arrange(year, paper)
 
-# filter(d, str_detect(affiliation, "Ã")) %>%
-#   pull(affiliation)
+# 2021: n = 2 paper pages just say "multiple events for single paper violation"
+#       ... unsolvable, problem is also visible online
+filter(d, year == 2021, is.na(pid)) %>%
+  count(paper)
 
-# prefixes cause issues with a few names and affiliations (n = 4)
-# TODO: the issue is in the raw data, and requires manual fixes
-filter(d, str_detect(full_name, "(Dr|Prof)\\.") | str_detect(affiliation, "(Dr|Prof)\\.")) %>%
-  select(year, session, paper, first_name, full_name, affiliation)
+# remove problematic papers
+d <- filter(d, !is.na(pid))
+
 
 # quick data checks -------------------------------------------------------
 
@@ -200,16 +200,67 @@ select(d, year, full_name, affiliation) %>%
   mutate(n_affiliations = n_distinct(affiliation)) %>%
   filter(n_affiliations > 1)
 
-# [NOTE]
-#
-# - some 'different' affiliations are in fact identical, except written
+# [NOTE] some 'different' affiliations are in fact identical, except written
 #   differently (e.g. "Uni. of X", "Uni. of X, City")
-# - not many participants seem to change affiliations through time... compare
-#   with other samples?
+
+# minimal data cleaning ---------------------------------------------------
+
+# very few encoding issues
+filter(d, str_detect(affiliation, "Ã")) %>%
+  pull(affiliation) %>%
+  unique()
+
+# very few issues with prefixes
+d %>%
+  filter(
+    str_detect(full_name, "(Dr|Prof|Ph\\.?D)(\\.|\\s|$)|PhD") |
+      str_detect(affiliation, "(Dr|ProfPh\\.?D)(\\.|\\s|$)|PhD")
+  ) %>%
+  select(year, session, paper, first_name, full_name, affiliation)
+
+# fix affiliations
+d <- d %>%
+  mutate(
+    # fix minor encoding issues in affiliations
+    affiliation = affiliation %>%
+      str_replace_all("EconÃ³mica", "Económica") %>%
+      str_replace_all("FundaÃ§Ã£o", "Fundação") %>%
+      str_replace_all("InvestigaciÃ³n", "Investigación") %>%
+      str_replace_all("JyvÃ¤skylÃ¤", "Jyväskylä") %>%
+      str_replace_all("PolÃ­tica", "Política") %>%
+      str_replace_all("SÃo Paulo", "São Paul") %>%
+      str_replace_all("SociÃ©tÃ©", "Société") %>%
+      str_replace_all("UniversitÃ¤t", "Universität") %>%
+      str_replace_all("UniversitÃ©", "Université") %>%
+      str_replace_all("ZÃ¼rich", "Zürich"),
+    # encode missing affiliations and correct a few cases
+    affiliation = case_when(
+      affiliation %in% c("", "--") ~ NA_character_,
+      # filter(d, full_name %in% "Federica Izzo")
+      year == 2018 & full_name %in% "Federica Izzo" ~ "London School of Economics and Political Science",
+      # filter(d, full_name %in% "Sparsha Saha")
+      full_name %in% "Sparsha Saha" & affiliation %in% "Dr." ~ "Harvard University",
+      # filter(d, str_detect(full_name, "Ackelsberg"))
+      affiliation %in% "Dr. Martha A. Ackelsberg" ~ "Smith College",
+      TRUE ~ affiliation
+    ),
+    # remove prefixes ("Prof." not actually found in the data)
+    first_name = str_remove_all(first_name, "(Dr|,\\s+Ph\\.D|Prof)\\.\\s?"),
+    full_name = str_remove_all(full_name, "(Dr|,\\s+Ph\\.D|Prof)\\.\\s?")
+  ) %>%
+  # some columns have extra white space (U.S. loves double spaces)
+  # map(d, ~ sum(str_detect(.x, "^\\s|\\s$|\\s{2,}"), na.rm = TRUE))
+  # str_subset(d$session_title, "^\\s|\\s$|\\s{2,}")
+  # str_subset(d$paper_title, "^\\s|\\s$|\\s{2,}")
+  # sample(str_subset(d$abstract, "^\\s|\\s$|\\s{2,}"), 1)
+  # str_subset(d$full_name, "^\\s|\\s$|\\s{2,}")
+  # str_subset(d$first_name, "^\\s|\\s$|\\s{2,}")
+  # str_subset(d$affiliation, "^\\s|\\s$|\\s{2,}")
+  mutate(across(where(is.character) & !c(year, session, paper, pid), str_squish))
 
 # on homonyms -------------------------------------------------------------
 
-# there are, in fact, some, but very few, homonyms (n = 43), and
+# there are, in fact, some, but very few, homonyms (n = 68), and
 # there are never more than 2 participants with the same name in the same year
 # group_by(d, year, full_name) %>%
 #   summarise(n_pids = n_distinct(pid)) %>%
@@ -239,6 +290,21 @@ select(d, year, full_name, affiliation) %>%
 
 # export data and counts --------------------------------------------------
 
+# sanity checks
+stopifnot(!is.na(d$year))
+stopifnot(!is.na(d$session))
+stopifnot(!is.na(d$type))
+stopifnot(!is.na(d$session_title))
+stopifnot(!is.na(d$pid))
+stopifnot(!is.na(d$full_name))
+stopifnot(!is.na(d$first_name))
+stopifnot(!is.na(d$role))
+
+# [NOTE] allowed NAs:
+#
+# - `paper`, `paper_title`, `abstract` (for chairs/discussants)
+# - `affiliation`
+
 # export everything as backup
 arrange(d, year, session, role, pid) %>%
   readr::write_tsv("data/programs.tsv")
@@ -248,13 +314,16 @@ group_by(d, year) %>%
   summarise(
     n_sessions = n_distinct(session),
     # [WARNING] assumes no homonyms -- see section above
-    n_participants = n_distinct(full_name),
-    n_papers = n_distinct(paper)
+    n_participants = n_distinct(pid),
+    n_names = n_distinct(full_name),
+    n_affiliations = n_distinct(affiliation, na.rm = TRUE),
+    n_papers = n_distinct(paper, na.rm = TRUE)
   ) %>%
   arrange(year) %>%
   readr::write_tsv("data/years.tsv")
 
-print(read_tsv("data/years.tsv", col_types = "iiii"))
+print(read_tsv("data/years.tsv", col_types = "iiiiii"))
+# print(colSums(read_tsv("data/years.tsv", col_types = "iiiiii")))
 
 # export sessions
 select(d, year, session, type, session_title) %>%

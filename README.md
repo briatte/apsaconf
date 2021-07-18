@@ -1,16 +1,16 @@
 R code to download conference panels ('sessions') and papers from __[APSA meetings](https://apsanet.org/EVENTS/Past-Annual-Meetings) from 2015 to 2021__ (_T_ = __7 years__).
 
-There are __9,772 sessions__ and __28,583 papers__, containing __15,974 unique participant names__ (with a few homonyms) and __3,652 unique affiliations__ (some of which point to the same entities).
+The data cover over __28,500 papers__ presented by approximately __19,000 participants__ in over __8,500 sessions__ .
 
 | Year  | Sessions | Participants | Papers |
 |:------|:-----|:-----|:-----|
-| 2015 |  972 | 1,832 | 3,862 |
-| 2016 | 1,131 | 2,240 | 4,127 |
-| 2017 | 1,221 | 2,359 | 4,039 |
-| 2018 | 1,294 | 6,559 | 4,202 |
-| 2019 | 1,499 | 6,853 | 4,421 |
-| 2020 | 1,301 | 5,705 | 3,480 |
-| 2021 | 1,368 | 7,016 | 4,459 |
+| 2015 |   972 | 5,518 | 3,861 |
+| 2016 | 1,131 | 6,085 | 4,126 |
+| 2017 | 1,221 | 6,076 | 4,038 |
+| 2018 | 1,294 | 6,571 | 4,201 |
+| 2019 | 1,499 | 6,865 | 4,420 |
+| 2020 | 1,301 | 5,716 | 3,479 |
+| 2021 | 1,368 | 7,030 | 4,456 |
 
 This is __work in progress__, so the counts are approximate until further data cleaning and other corrections are performed.
 
@@ -30,7 +30,9 @@ All files are TSV-formatted. Missing values are denoted `NA`.
 
 Notes:
 
-- Identifiers `session`, `paper` and `pid` are variable-length numbers, but are better handled by treating them as strings to avoid issues with e.g. leading zeros. - A few participants have two `pid` identifiers in a same conference year, most likely because they created two conference user accounts.
+- Identifiers `session`, `paper` and `pid` are variable-length numbers, but are better handled by treating them as strings to avoid issues with e.g. leading zeros.
+- Some sessions (e.g. all-member meetings) have no participants, so the raw data contain more session pages than there are unique sessions in the parsed data.
+- A few participants have two `pid` identifiers in a same conference year, most likely because they created two conference user accounts.
 - Session and paper identifiers (`session` and `paper`) might repeat over years, which is why the data contain less unique values for those than listed above.
 - Similarly, `pid` is unique only per conference year: it is *not* fixed through time, and so cannot be used to identify people longitudinally.
 

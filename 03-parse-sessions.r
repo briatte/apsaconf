@@ -140,7 +140,7 @@ d <- filter(d, str_detect(pid, "paper_id")) %>%
   arrange(year, session, pid)
 
 # sanity check: all people identified as presenters in sessions are also
-# identified as presenters (authors) in papers, or NA for chairs/discussants
+# identified as presenters (authors) in papers, or as NA for chairs/discussants
 stopifnot(d$role.x %in% c("p", NA_character_))
 stopifnot(d$role.y %in% c("p", NA_character_))
 
@@ -370,8 +370,9 @@ cat(
   "Exported",
   n_distinct(d$year), "years,",
   n_distinct(d$session), "sessions,",
-  n_distinct(d$full_name), "participant names,",
-  n_distinct(d$affiliation), "affiliations.\n"
+  n_distinct(d$full_name), "names,",
+  n_distinct(d$pid), "participants,",
+  n_distinct(d$affiliation, na.rm = TRUE), "affiliations.\n"
 )
 
 # # number of rows in each file
